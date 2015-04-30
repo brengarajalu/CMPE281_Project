@@ -106,8 +106,8 @@ app.post("/api/:tenantid/login", function(req, res){
               for (var i in req.body)
               {
                   if(null!=req.body[i].value && req.body[i].value!='') {
-                      var queryString = "INSERT INTO ??(??,??,??,??) VALUES (?,?,?,?)";
-                      var table = ["user_data_table", "user_id", "tenant_id", "field_id", "field_value", req.params.user_id, 1, req.body[i].fieldId, req.body[i].value];
+                      var queryString = "INSERT INTO ??(??,??,??,??,??,??) VALUES (?,?,?,?,?,?)";
+                      var table = ["user_data_table", "user_id", "tenant_id","module", "field_id","field_name", "field_value", req.params.user_id, 1,"Project", req.body[i].fieldId,req.body[i].fieldName, req.body[i].value];
                       queryString = mysql.format(queryString, table);
                       queryToExecute += queryString + ";"
                   }
@@ -127,12 +127,16 @@ app.post("/api/:tenantid/login", function(req, res){
 //CREATE TASK
 app.post("/api/:tenantid/:user_id/createtask", function(req, res){
     var queryToExecute="";
+    console.log("hit create resource")
+    console.log(req.body.length);
     for (var i in req.body)
     {
+        console.log(req.body[i].fieldId);
+        console.log(req.body[i].value);
         if(null!=req.body[i].value && req.body[i].value!='') {
-            var queryString = "INSERT INTO ??(??,??,??,??) VALUES (?,?,?,?)";
-            var table = ["user_data_table", "user_id", "tenant_id","parent_field_id", "field_id", "field_value", req.params.user_id, 1,1, req.body[i].fieldId, req.body[i].value];
-            queryString = mysql.format(queryString, table);
+            var queryString = "INSERT INTO ??(??,??,??,??,??,??,??) VALUES (?,?,?,?,?,?,?)";
+            var table = ["user_data_table", "user_id", "tenant_id","module","parent_field_id","field_id","field_name","field_value", req.params.user_id, 1,"Task",1, req.body[i].fieldId,req.body[i].fieldName, req.body[i].value];
+            queryString = mysql.format(queryString,table);
             queryToExecute += queryString + ";"
         }
 
@@ -153,13 +157,15 @@ app.post("/api/:tenantid/:user_id/createtask", function(req, res){
 app.post("/api/:tenantid/:user_id/createResource", function(req, res){
     var queryToExecute="";
     console.log("hit create resource")
-    console.log(req.body);
+    console.log(req.body.length);
     for (var i in req.body)
     {
+        console.log(req.body[i].fieldId);
+        console.log(req.body[i].value);
         if(null!=req.body[i].value && req.body[i].value!='') {
-            var queryString = "INSERT INTO ??(??,??,??,??) VALUES (?,?,?,?)";
-            var table = ["user_data_table", "user_id", "tenant_id","parent_field_id", "field_id", "field_value", req.params.user_id, 1,1, req.body[i].fieldId, req.body[i].value];
-            queryString = mysql.format(queryString, table);
+            var queryString = "INSERT INTO ??(??,??,??,??,??,??,??) VALUES (?,?,?,?,?,?,?)";
+            var table = ["user_data_table", "user_id", "tenant_id","module","parent_field_id","field_id","field_name","field_value", req.params.user_id, 1,"Resource",1,req.body[i].fieldId,req.body[i].fieldName, req.body[i].value];
+            queryString = mysql.format(queryString,table);
             queryToExecute += queryString + ";"
         }
 
@@ -169,18 +175,60 @@ app.post("/api/:tenantid/:user_id/createResource", function(req, res){
         if(error){
             res.json({"Error" : true, "Message" : "Error executing MySQL query"});
         } else {
-            res.json({"Error" : false, "Message" : "{'project_id' : " +results.insertId+"}"});
+            res.json({"Error" : false, "Message" : "{'task_id' : " +results.insertId+"}"});
         }
     });
 
 });
-//Get All fields
-app.post("/api/:tenantid/view", function(req, res){
 
-    var queryString = "SELECT * from ?? WHERE ??=? and ??=?";
+//GET PROJECTS
+app.get("/api/:tenantid/:userid/viewprojects", function(req, res){
+
+    var queryString = "SELECT * from ?? WHERE ??=? and ??=? and ??=?";
+    //field_id = field of the percentage_complete
+    var table = ["user_data_table", "user_id", req.params.userid, "tenant_id", 1,"module","Project"];
+    queryString = mysql.format(queryString, table);
+    console.log(queryString);
+
+    connection.query(queryString, function (error,results){
+        if(error){
+            res.json({"Error" : true, "Message" : "Error executing MySQL query"});
+        } else {
+            res.json({"Error" : false, "Projects" : results});
+        }
+    });
+
+});
+
+
+//View Tasks
+app.get("/api/:tenantid/:user_id/:projectId/viewtasks", function(req, res){
+
+    console.log("hit view tasks")
+    var queryString = "SELECT * from ?? WHERE ??=? and ??=? and ?? = ? and ?? = ?";
 
     //field_id = field of the percentage_complete
-    var table = ["user_data_table", "user_id", req.body.user_id, "tenant_id", tenantid];
+    var table = ["user_data_table", "user_id", req.params.user_id, "tenant_id",req.params.tenantid,"parent_field_id",req.params.projectId,"module","Task"];
+    queryString = mysql.format(queryString, table);
+    console.log(queryString);
+
+    connection.query(queryString, function (error,results){
+        if(error){
+            res.json({"Error" : true, "Message" : "Error executing MySQL query"});
+        } else {
+            res.json({"Error" : false, "Tasks" : results});
+        }
+    });
+
+});
+
+
+//Get All fields
+app.get("/api/:tenantid/:userid/viewall", function(req, res){
+
+    var queryString = "SELECT * from ?? WHERE ??=? and ??=?";
+    //field_id = field of the percentage_complete
+    var table = ["user_data_table", "user_id", userid, "tenant_id", tenantid];
     queryString = mysql.format(queryString, table);
     console.log(queryString);
 
@@ -193,6 +241,10 @@ app.post("/api/:tenantid/view", function(req, res){
     });
 
 });
+
+
+//END OF
+
 
 
 //Get hierarchy fields
